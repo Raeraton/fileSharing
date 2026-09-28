@@ -6,13 +6,16 @@ from random import randrange
 SERVER_ADDR = (input("ip: "), int(input("port: ")))
 
 PACKAGE_SIZE = int(input("package size: "))
+
+TIME_OUT = float(input("time out: "))
+
 file_size = 0
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(( "0.0.0.0", 0 ))
 
 print( "setting package size" )
-sock.settimeout(1)
+sock.settimeout(TIME_OUT)
 while 1:
     try:
         reqid = randrange(1000000)
@@ -24,6 +27,7 @@ while 1:
 
         if int.from_bytes(data[:4],"big") != reqid:
             print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
+            sleep(TIME_OUT)
             continue
 
         PACKAGE_SIZE = int.from_bytes( data[4:6], "big" )
@@ -49,6 +53,7 @@ while 1:
             continue
         if int.from_bytes(data[:4],"big") != reqid: 
             print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
+            sleep(TIME_OUT)
             continue
 
         file_size = int.from_bytes( data[4:12], "big" )
@@ -111,6 +116,7 @@ for i in range(package_count):
                 continue
             if int.from_bytes(data[:4],"big") != reqid:
                 print(f"wrong req id. expected: {reqid}  got:{int.from_bytes(data[:4],"big")}")
+                sleep(TIME_OUT)
                 continue
 
             package_idx = int.from_bytes(data[4:8])
