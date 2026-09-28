@@ -18,15 +18,20 @@ while 1:
         reqid = randrange(1000000)
         sock.sendto( b"PKGS" + reqid.to_bytes(4,"big") + PACKAGE_SIZE.to_bytes(2,"big"), SERVER_ADDR )
         data, addr = sock.recvfrom(1024)
-        if addr != SERVER_ADDR: continue
-        if int.from_bytes(data[:4],"big") != reqid: continue
+        if addr != SERVER_ADDR: 
+            print( "wrong address", SERVER_ADDR, addr )
+            continue
+
+        if int.from_bytes(data[:4],"big") != reqid:
+            print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
+            continue
 
         PACKAGE_SIZE = int.from_bytes( data[4:6], "big" )
 
         break
 
     except TimeoutError:
-        pass
+        print(".", end="")
     except Exception as e:
         print(e)
 
@@ -40,15 +45,20 @@ while 1:
         reqid = randrange(1000000)
         sock.sendto( b"GFS_" + reqid.to_bytes(4,"big"), SERVER_ADDR )
         data, addr = sock.recvfrom(1024)
-        if addr != SERVER_ADDR: continue
-        if int.from_bytes(data[:4],"big") != reqid: continue
+        if addr != SERVER_ADDR: 
+            print( "wrong address", SERVER_ADDR, addr )
+            continue
+        if int.from_bytes(data[:4],"big") != reqid: 
+            print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
+            continue
 
         file_size = int.from_bytes( data[4:12], "big" )
 
         break
 
     except TimeoutError:
-        pass
+        
+        print(".", end="")
     except Exception as e:
         print(e)
 
@@ -118,7 +128,7 @@ for i in range(package_count):
             break
             
         except TimeoutError:
-            pass
+            print(".", end="")
         except Exception as e:
             print(e)
 
