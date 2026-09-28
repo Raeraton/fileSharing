@@ -3,7 +3,7 @@ from time import sleep, time
 import threading
 from random import randrange
 
-SERVER_ADDR = (input("ip: "), int("port: "))
+SERVER_ADDR = (input("ip: "), int(input("port: ")))
 
 PACKAGE_SIZE = int(input("package size: "))
 file_size = 0
