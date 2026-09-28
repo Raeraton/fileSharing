@@ -12,7 +12,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(( "0.0.0.0", 0 ))
 
 print( "setting package size" )
-sock.settimeout(0.1)
+sock.settimeout(1)
 while 1:
     try:
         reqid = randrange(1000000)
@@ -39,7 +39,6 @@ print(f"package size is {PACKAGE_SIZE}")
 
 
 print("getting file size")
-sock.settimeout(0.1)
 while 1:
     try:
         reqid = randrange(1000000)
