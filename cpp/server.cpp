@@ -229,6 +229,7 @@ public:
                 running = false;
             }
             default:
+                std::cout << "unknown req: " << req_buffer << "\n";
                 break;
             }
 
@@ -252,11 +253,11 @@ public:
 int main(){
 
 
-    file_handler::IFile<64, 8> file{"in"};
+    file_handler::IFile<1024, 8> file{"temp/in"};
 
     std::cout << file.size() << '\n';
 
-    Server<64, 8> server{file, 5000};
+    Server<1024, 8> server{file, 20000};
 
     server.serve_one();
 
