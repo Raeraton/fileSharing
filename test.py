@@ -91,7 +91,6 @@ print( f"filesize is {file_size}" )
 
 package_count = file_size//PACKAGE_SIZE + (file_size%PACKAGE_SIZE!=0)
 file = open("out", "wb")
-sock.settimeout(0.1)
 
 
 
