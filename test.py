@@ -133,7 +133,7 @@ for i in range(package_count):
 
     packet_idx = int.from_bytes( data[:4], "big" )
 
-    file.write(data)
+    file.write(data[4:])
 
 for i in range(100):
     sock.sendto( b"FINH", SERVER_ADDR )
