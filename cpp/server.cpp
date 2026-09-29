@@ -180,7 +180,16 @@ public:
                 uint32_t packet_id = from_big_endian( *((uint32_t*)(req_buffer+8)) );
                 uint64_t resp_block_size = 4096-4;                
 
+                std::cout   << "bpi   " << packet_size
+                            << "\nbrbs  " << resp_block_size
+                            << "\nbrid  " << from_big_endian(*((uint32_t*)(req_buffer+4)) ) << "\n"; 
+
                 get_response_block(packet_id, req_buffer+4, &resp_block_size);
+
+
+                std::cout   << "api   " << packet_size
+                            << "\narbs  " << resp_block_size
+                            << "\narid  " << from_big_endian(*((uint32_t*)(req_buffer+4))) << "\n";
 
                 sendto(
                     sock,
@@ -215,7 +224,7 @@ public:
                     packet_size = _packet_size;
                     continue;
                 }
-                *((uint16_t*)(req_buffer+6)) = to_big_endian(packet_size);
+                *((uint16_t*)(req_buffer+8)) = to_big_endian(packet_size);
                 sendto(
                     sock,
                     req_buffer + 4,
