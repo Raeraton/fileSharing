@@ -96,14 +96,20 @@ monitor_running = True
 time_point = time()
 bytes_recved = 0
 bytes_all_recved = 0
+packets_sent = 0
+packets_recved = 0
 def monitor_target():
-    global time_point, bytes_recved, bytes_all_recved
+    global time_point, bytes_recved, bytes_all_recved, packets_sent, packets_recved
     while monitor_running:
         tn = time()
         bytes_all_recved += bytes_recved
-        print( f"{100*bytes_all_recved//file_size}\t\t\t   downspeed: {bytes_recved*8/1000000/(tn-time_point)} Mb/s" )
+        if packets_sent == 0:
+            packets_sent = 1
+        print( f"{round(100*bytes_all_recved/file_size, 3)}%\t   lost ratio: {round(100*packets_recved/packets_sent, 3)}%\t   downspeed: {round(bytes_recved*8/1000000/(tn-time_point), 3)} Mb/s" )
         bytes_recved = 0
         time_point = tn
+        packets_sent = 0
+        packets_recved = 0
         sleep(1)
 
 monitor_thread = threading.Thread(target=monitor_target)
@@ -121,6 +127,7 @@ for i in range(package_count):
 
             if not dont_ask:
                 reqid = randrange(1000000)
+                packets_sent += 1
                 sock.sendto( b"GPBI" + reqid.to_bytes(4,"big") + i.to_bytes(4,"big"), SERVER_ADDR )
             data, addr = sock.recvfrom(4096)
 
@@ -142,7 +149,7 @@ for i in range(package_count):
             data = data[8:]
 
             bytes_recved += len(data)
-
+            packets_recved += 1
             file.write(data)
 
             break
