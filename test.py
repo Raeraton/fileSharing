@@ -169,7 +169,9 @@ else:
                     idxc = min( (PACKAGE_SIZE-8)//4, len(ask_for_next))
 
                     for i in range(idxc):
+                        print(ask_for_next[i], end=" ")
                         data += ask_for_next[i].to_bytes(4,"big")
+                    print()
 
                     sock.sendto(
                         data,

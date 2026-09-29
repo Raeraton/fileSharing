@@ -13,6 +13,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#ifdef LOGGING
+#define LOG(...) ( fprintf(stderr, __VA_ARGS__) )
+#else
+#define LOG(...)
+#endif
+
+
 
 inline bool buffeqlen4str( const uint8_t* b, const char* s ){
     for(int i=0;  i<4;  i++){
@@ -181,6 +188,8 @@ public:
                 uint32_t packet_id = from_big_endian( *((uint32_t*)(req_buffer+8)) );
                 uint64_t resp_block_size = 4096-4;                
 
+                LOG("[info] get by id. id: %u\n", packet_id);
+
                 get_response_block(packet_id, req_buffer+4, &resp_block_size);
 
                 sendto(
@@ -198,6 +207,9 @@ public:
                 for( uint32_t i=0;  i<index_count;  i++ ){
                     uint32_t index = from_big_endian( *((uint32_t*)(req_buffer+8+(i*4))) );
                     uint64_t resp_block_len = 4096-4;
+
+                    LOG( "[info] get by ids. %u -> %u %ld\n", i, index, recved );
+
                     get_response_block( index, req_buffer+4, &resp_block_len );
                     sendto(
                         sock,
@@ -214,8 +226,14 @@ public:
             case GET_RANGE:{
                 uint32_t start = from_big_endian( *((uint32_t*)(req_buffer+8)) );
                 uint32_t end = from_big_endian( *((uint32_t*)(req_buffer+12)) );
+
+                LOG("[info] get range. range(%u, %u)\n", start, end);
+
                 for( uint32_t i=start;  i<end;  i++ ){
                     uint64_t resp_block_size = 4096-4;
+
+                    LOG("[subinfo] get range. sending %u\n", i );
+
                     get_response_block(i, req_buffer+4, &resp_block_size);
                     sendto(
                         sock,
@@ -229,6 +247,7 @@ public:
             }break;
             case GET_FILE_SIZE:{
                 *((uint64_t*)(req_buffer+8)) = to_big_endian(get_file_size());
+                LOG( "[info] get file size. sending %ld\n", get_file_size() );
                 sendto(
                     sock,
                     req_buffer+4,
@@ -246,6 +265,7 @@ public:
                     continue;
                 }
                 *((uint16_t*)(req_buffer+8)) = to_big_endian(packet_size);
+                LOG("[info] set/get package size. %ld\n", packet_size);
                 sendto(
                     sock,
                     req_buffer + 4,
@@ -281,15 +301,24 @@ public:
 
 
 int main(){
+    try{
 
+    LOG("[info] logging is on\n");
 
     file_handler::IFile<1024, 8> file{"temp/in"};
 
-    std::cout << file.size() << '\n';
+    LOG("[info] file opened, size is %ld\n", file.size());
 
     Server<1024, 8> server{file, 20000};
 
+    LOG("[info] listening\n");
+
     server.serve_one();
 
+    }catch( const char* err ){
+        std::cerr << "[error] " << err << "\n";
+    }catch( ... ){
+        std::cerr << "[error] unknown\n";
+    }
 
 }
