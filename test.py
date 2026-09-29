@@ -13,71 +13,75 @@ file_size = 0
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(( "0.0.0.0", 0 ))
+sock.settimeout(TIME_OUT)
+
+
+
+
+bytes_recved = 0
+packets_sent = 0
+packets_recved = 0
+### tests = list of tuples ( func, name, dont_ask_var ) if func returns true than the recved packege is wrong
+def recv_data( reqtype: bytes, reqcont: bytes, tests=[] ) -> bytes:
+    global bytes_recved, packets_sent, packets_recved
+    dont_ask = False
+    out = b""
+    reqid = 0
+    while 1:
+        try:
+            if not dont_ask:
+                reqid = randrange(1000000)
+                sock.sendto( reqtype[:4] + reqid.to_bytes(4, "big") + reqcont, SERVER_ADDR )
+                packets_sent += 1
+
+            data, addr = sock.recvfrom( 4096 )
+
+            if addr != SERVER_ADDR:
+                print( f"recved from wrong addr SERVER_ADDR != {addr}" )
+                dont_ask = True
+                continue
+
+            if int.from_bytes(data[:4],"big") != reqid:
+                print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
+                dont_ask = True
+                continue
+
+            out = data[4:]
+
+
+            for test in tests:
+                if test[0](out):
+                    print(test[1], "data:", out)
+                    dont_ask = test[2]
+
+
+            packets_recved += 1
+            bytes_recved += len(out)
+
+            break
+
+        except TimeoutError:
+            print(".", end="")
+        except Exception as e:
+            print(e)
+        dont_ask = False
+
+    return out
+
+    
+
+
 
 print( "setting package size" )
-sock.settimeout(TIME_OUT)
-dont_ask = False
-reqid = 0
-while 1:
-    try:
-        
-        if not dont_ask:
-            reqid = randrange(1000000)
-            sock.sendto( b"PKGS" + reqid.to_bytes(4,"big") + PACKAGE_SIZE.to_bytes(2,"big"), SERVER_ADDR )
-        data, addr = sock.recvfrom(1024)
-        if addr != SERVER_ADDR: 
-            print( "wrong address", SERVER_ADDR, addr )
-            dont_ask = True
-            continue
 
-        if int.from_bytes(data[:4],"big") != reqid:
-            print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
-            sleep(TIME_OUT)
-            dont_ask = True
-            continue
-
-        PACKAGE_SIZE = int.from_bytes( data[4:6], "big" )
-
-        break
-
-    except TimeoutError:
-        print(".", end="")
-    except Exception as e:
-        print(e)
-
-    dont_ask = False
-
+data = recv_data(b"PKGS", PACKAGE_SIZE.to_bytes(2, "big"))
+PACKAGE_SIZE = int.from_bytes(data, "big")
 print(f"package size is {PACKAGE_SIZE}")
 
 
 print("getting file size")
-while 1:
-    try:
-        if not dont_ask:
-            reqid = randrange(1000000)
-            sock.sendto( b"GFS_" + reqid.to_bytes(4,"big"), SERVER_ADDR )
-        data, addr = sock.recvfrom(1024)
-        if addr != SERVER_ADDR: 
-            print( "wrong address", SERVER_ADDR, addr )
-            dont_ask = True
-            continue
-        if int.from_bytes(data[:4],"big") != reqid: 
-            print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
-            sleep(TIME_OUT)
-            dont_ask = True
-            continue
-
-        file_size = int.from_bytes( data[4:12], "big" )
-
-        break
-
-    except TimeoutError:
-        
-        print(".", end="")
-    except Exception as e:
-        print(e)
-    dont_ask = False
-
+data = recv_data(b"GFS_", b"")
+file_size = int.from_bytes( data[:8], "big" )
 print( f"filesize is {file_size}" )
 
 
@@ -120,47 +124,16 @@ monitor_thread.start()
 
 
 
-
 for i in range(package_count):
-    while 1:
-        try:
+    def package_idx_test(data:bytes):
+        global i
+        return i != int.from_bytes(data[:4], "big")
 
-            if not dont_ask:
-                reqid = randrange(1000000)
-                packets_sent += 1
-                sock.sendto( b"GPBI" + reqid.to_bytes(4,"big") + i.to_bytes(4,"big"), SERVER_ADDR )
-            data, addr = sock.recvfrom(4096)
+    data = recv_data(b"GPBI", i.to_bytes(4, "big"), [(package_idx_test, "package idx", True)])
 
-            if addr != SERVER_ADDR:
-                print("resp not from the server")
-                dont_ask = True
-                continue
-            if int.from_bytes(data[:4],"big") != reqid:
-                print(f"wrong req id. expected: {reqid}  got:{int.from_bytes(data[:4],"big")}")
-                sleep(TIME_OUT)
-                dont_ask = True
-                continue
+    packet_idx = int.from_bytes( data[:4], "big" )
 
-            package_idx = int.from_bytes(data[4:8])
-            if package_idx != i:
-                print( f"wrong packet id. expected: {i}  got: {package_idx}" )
-                continue
-
-            data = data[8:]
-
-            bytes_recved += len(data)
-            packets_recved += 1
-            file.write(data)
-
-            break
-            
-        except TimeoutError:
-            print(".", end="")
-        except Exception as e:
-            print(e)
-
-        dont_ask = False
-
+    file.write(data)
 
 for i in range(100):
     sock.sendto( b"FINH", SERVER_ADDR )
