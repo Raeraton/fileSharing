@@ -204,16 +204,20 @@ public:
             case GET_PACKAGE_BY_IDXS:{
                 uint32_t index_count = (recved-8)/4;
                 
+                uint8_t send_buffer[4096];
+                *((uint32_t*)send_buffer) = *((uint32_t*)(req_buffer+4));
+
                 for( uint32_t i=0;  i<index_count;  i++ ){
-                    uint32_t index = from_big_endian( *((uint32_t*)(req_buffer+8+(i*4))) );
-                    uint64_t resp_block_len = 4096-4;
+                    uint64_t offset = 8 + (i*4);
+                    uint32_t index = from_big_endian( *((uint32_t*)(req_buffer+offset)) );
+                    uint64_t resp_block_len = 4096;
 
-                    LOG( "[info] get by ids. %u -> %u %ld\n", i, index, recved );
+                    LOG( "[info] get by ids. %u -> %u %ld %u\n", i, index, recved, offset );
 
-                    get_response_block( index, req_buffer+4, &resp_block_len );
+                    get_response_block( index, send_buffer, &resp_block_len );
                     sendto(
                         sock,
-                        req_buffer+4,
+                        send_buffer,
                         resp_block_len,
                         0,
                         (sockaddr*)&addr,
