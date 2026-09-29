@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <vector>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -192,10 +193,39 @@ public:
                 );
             }break;
             case GET_PACKAGE_BY_IDXS:{
-                // TODO
+                uint32_t index_count = (recved-8)/4;
+                
+                for( uint32_t i=0;  i<index_count;  i++ ){
+                    uint32_t index = from_big_endian( *((uint32_t*)(req_buffer+8+(i*4))) );
+                    uint64_t resp_block_len = 4096-4;
+                    get_response_block( index, req_buffer+4, &resp_block_len );
+                    sendto(
+                        sock,
+                        req_buffer+4,
+                        resp_block_len,
+                        0,
+                        (sockaddr*)&addr,
+                        addr_len
+                    );
+                }
+
+
             }break;
             case GET_RANGE:{
-                // TODO
+                uint32_t start = from_big_endian( *((uint32_t*)(req_buffer+8)) );
+                uint32_t end = from_big_endian( *((uint32_t*)(req_buffer+12)) );
+                for( uint32_t i=start;  i<end;  i++ ){
+                    uint64_t resp_block_size = 4096-4;
+                    get_response_block(i, req_buffer+4, &resp_block_size);
+                    sendto(
+                        sock,
+                        req_buffer + 4,
+                        resp_block_size,
+                        0,
+                        (sockaddr*)&addr,
+                        addr_len
+                    );
+                }
             }break;
             case GET_FILE_SIZE:{
                 *((uint64_t*)(req_buffer+8)) = to_big_endian(get_file_size());

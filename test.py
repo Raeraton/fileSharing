@@ -9,6 +9,10 @@ PACKAGE_SIZE = int(input("package size: "))
 
 TIME_OUT = float(input("time out: "))
 
+packet_range_size = int(input("range size: "))
+
+
+
 file_size = 0
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -123,17 +127,94 @@ monitor_thread.start()
 
 
 
+if packet_range_size < 1:
+    for i in range(package_count):
+        def package_idx_test(data:bytes):
+            global i
+            return i != int.from_bytes(data[:4], "big")
 
-for i in range(package_count):
-    def package_idx_test(data:bytes):
-        global i
-        return i != int.from_bytes(data[:4], "big")
+        data = recv_data(b"GPBI", i.to_bytes(4, "big"), [(package_idx_test, "package idx", True)])
 
-    data = recv_data(b"GPBI", i.to_bytes(4, "big"), [(package_idx_test, "package idx", True)])
+        packet_idx = int.from_bytes( data[:4], "big" )
 
-    packet_idx = int.from_bytes( data[:4], "big" )
+        file.write(data[4:])
 
-    file.write(data[4:])
+else:
+
+    range_count = package_count//packet_range_size + (package_count%packet_range_size != 0)
+    for iteration in range(range_count):
+        range_start = iteration*packet_range_size
+        range_end = min( (iteration+1)*packet_range_size, package_count )
+
+        responses = {}
+
+        reqid = 0
+        ask_for_next = []
+
+        running = True
+        while running:
+            try:
+
+                if reqid == 0:
+                    reqid = randrange( 1000000 )
+                    sock.sendto(
+                        b"GRNG" + reqid.to_bytes(4,"big") + range_start.to_bytes(4,"big") + range_end.to_bytes(4,"big"),
+                        SERVER_ADDR
+                    )
+
+                if reqid == -1:
+                    reqid = randrange( 1000000 )
+                    data = b"GBIS" + reqid.to_bytes(4, "big")
+
+                    idxc = min( (PACKAGE_SIZE-8)//4, len(ask_for_next))
+
+                    for i in range(idxc):
+                        data += ask_for_next[i].to_bytes(4,"big")
+
+                    sock.sendto(
+                        data,
+                        SERVER_ADDR
+                    )
+
+                data, addr = sock.recvfrom(4096)
+                if addr != SERVER_ADDR:
+                    print("respone not from the server")
+                    continue
+
+                if int.from_bytes( data[:4], "big" ) != reqid:
+                    print( f"wrong reqid exp: {reqid} got: {int.from_bytes( data[:4], "big" )}" )
+                    continue
+
+                packet_id = int.from_bytes( data[4:8], "big" )
+
+                if packet_id not in range( range_start, range_end ):
+                    print( f"wrong packet recved: {packet_id} is not in [{range_start}; {range_end})" )
+                    continue
+
+                responses[packet_id] = data[8:]
+                bytes_recved += len( data[8:] )
+
+                
+            except TimeoutError:
+                reqid = -1
+                ask_for_next = []
+                for _i in range(range_start, range_end):
+                    if _i not in responses:
+                        ask_for_next.append(_i)
+
+            except Exception as e:
+                print("[ERROR]", e)
+
+
+            running = False
+            for _i in range(range_start, range_end):
+                if _i not in responses:
+                    running = True
+
+        for i in range( range_start, range_end ):
+            file.write(responses[i])
+
+
 
 for i in range(100):
     sock.sendto( b"FINH", SERVER_ADDR )
