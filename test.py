@@ -16,18 +16,24 @@ sock.bind(( "0.0.0.0", 0 ))
 
 print( "setting package size" )
 sock.settimeout(TIME_OUT)
+dont_ask = False
+reqid = 0
 while 1:
     try:
-        reqid = randrange(1000000)
-        sock.sendto( b"PKGS" + reqid.to_bytes(4,"big") + PACKAGE_SIZE.to_bytes(2,"big"), SERVER_ADDR )
+        
+        if not dont_ask:
+            reqid = randrange(1000000)
+            sock.sendto( b"PKGS" + reqid.to_bytes(4,"big") + PACKAGE_SIZE.to_bytes(2,"big"), SERVER_ADDR )
         data, addr = sock.recvfrom(1024)
         if addr != SERVER_ADDR: 
             print( "wrong address", SERVER_ADDR, addr )
+            dont_ask = True
             continue
 
         if int.from_bytes(data[:4],"big") != reqid:
             print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
             sleep(TIME_OUT)
+            dont_ask = True
             continue
 
         PACKAGE_SIZE = int.from_bytes( data[4:6], "big" )
@@ -39,21 +45,26 @@ while 1:
     except Exception as e:
         print(e)
 
+    dont_ask = False
+
 print(f"package size is {PACKAGE_SIZE}")
 
 
 print("getting file size")
 while 1:
     try:
-        reqid = randrange(1000000)
-        sock.sendto( b"GFS_" + reqid.to_bytes(4,"big"), SERVER_ADDR )
+        if not dont_ask:
+            reqid = randrange(1000000)
+            sock.sendto( b"GFS_" + reqid.to_bytes(4,"big"), SERVER_ADDR )
         data, addr = sock.recvfrom(1024)
         if addr != SERVER_ADDR: 
             print( "wrong address", SERVER_ADDR, addr )
+            dont_ask = True
             continue
         if int.from_bytes(data[:4],"big") != reqid: 
             print( "wrong reqid", reqid, int.from_bytes(data[:4],"big") )
             sleep(TIME_OUT)
+            dont_ask = True
             continue
 
         file_size = int.from_bytes( data[4:12], "big" )
@@ -65,6 +76,7 @@ while 1:
         print(".", end="")
     except Exception as e:
         print(e)
+    dont_ask = False
 
 print( f"filesize is {file_size}" )
 
@@ -107,16 +119,19 @@ for i in range(package_count):
     while 1:
         try:
 
-            reqid = randrange(1000000)
-            sock.sendto( b"GPBI" + reqid.to_bytes(4,"big") + i.to_bytes(4,"big"), SERVER_ADDR )
+            if not dont_ask:
+                reqid = randrange(1000000)
+                sock.sendto( b"GPBI" + reqid.to_bytes(4,"big") + i.to_bytes(4,"big"), SERVER_ADDR )
             data, addr = sock.recvfrom(4096)
 
             if addr != SERVER_ADDR:
                 print("resp not from the server")
+                dont_ask = True
                 continue
             if int.from_bytes(data[:4],"big") != reqid:
                 print(f"wrong req id. expected: {reqid}  got:{int.from_bytes(data[:4],"big")}")
                 sleep(TIME_OUT)
+                dont_ask = True
                 continue
 
             package_idx = int.from_bytes(data[4:8])
@@ -136,6 +151,8 @@ for i in range(package_count):
             print(".", end="")
         except Exception as e:
             print(e)
+
+        dont_ask = False
 
 
 for i in range(100):
