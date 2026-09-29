@@ -171,7 +171,9 @@ else:
                     for i in range(idxc):
                         print(ask_for_next[i], end=" ")
                         data += ask_for_next[i].to_bytes(4,"big")
-                    print()
+
+                    for i in range(len(data)-2):
+                        print( int.from_bytes( data[i*4:(i+1)*4], "big" ) )
 
                     sock.sendto(
                         data,
